@@ -1,0 +1,15 @@
+[package]
+name = "lfconf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Biblioteka klienta i storage do lfconfd - konfiguracji lfshell"
+
+[dependencies]
+tokio = { workspace = true, features = ["rt", "fs"] }
+zbus.workspace = true
+serde.workspace = true
+ron.workspace = true
+parking_lot.workspace = true
+futures-util.workspace = true

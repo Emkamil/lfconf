@@ -1,0 +1,12 @@
+[package]
+name = "lfconf-query"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CLI for lfconfd"
+
+[dependencies]
+lfconf = { path = "../lfconf" }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+clap.workspace = true

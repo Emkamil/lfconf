@@ -1,0 +1,12 @@
+[package]
+name = "lfconfd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Demon konfiguracji lfshell - lekka alternatywa dla dconf"
+
+[dependencies]
+lfconf = { path = "../lfconf" }
+tokio = { workspace = true, features = ["full"] }
+zbus.workspace = true
