@@ -1,3 +1,18 @@
+// Copyright (C) 2026  Kamil Machowski
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use parking_lot::RwLock;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
@@ -5,6 +20,14 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
+///
+/// ```no_run
+/// # async fn example() -> zbus::Result<()> {
+/// let config = lfconf::client::ConfigClient::connect().await?;
+/// let opacity: f64 = config.get_or("appearance", "opacity", 0.95).await;
+/// config.set("appearance", "opacity", 0.8).await?;
+/// # Ok(()) }
+/// ```
 pub mod client {
     use crate::ConfigValue;
     use futures_util::StreamExt;
@@ -96,6 +119,18 @@ pub mod client {
             self.proxy.list_sections().await
         }
 
+        pub async fn get_all(&self) -> HashMap<(String, String), ConfigValue> {
+            let mut result = HashMap::new();
+            if let Ok(sections) = self.list_sections().await {
+                for section in sections {
+                    for (key, value) in self.get_section(&section).await {
+                        result.insert((section.clone(), key), value);
+                    }
+                }
+            }
+            result
+        }
+
         pub async fn watch<F>(&self, mut callback: F) -> zbus::Result<()>
         where
             F: FnMut(ConfigChange) + Send,
@@ -119,7 +154,6 @@ pub mod client {
     }
 }
 
-/// Typowana wartość konfiguracyjna, współdzielona między lfconfd i lfconf-query.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ConfigValue {
     Bool(bool),
@@ -130,14 +164,17 @@ pub enum ConfigValue {
 }
 
 impl ConfigValue {
+    /// Parsuje wartość z tekstu w składni RON, np. "true", "42", "\"hello\"".
     pub fn from_ron_str(s: &str) -> Result<Self, ron::error::SpannedError> {
         ron::from_str(s)
     }
 
+    /// Serializuje do tekstu RON, do przesłania przez D-Bus.
     pub fn to_ron_string(&self) -> String {
         ron::to_string(self).unwrap_or_default()
     }
 
+    /// Odgaduje typ z surowego tekstu (np. z argumentu CLI): bool -> int -> float -> string.
     pub fn infer_from_str(raw: &str) -> Self {
         if let Ok(b) = raw.parse::<bool>() {
             ConfigValue::Bool(b)
@@ -150,6 +187,7 @@ impl ConfigValue {
         }
     }
 
+    /// Czytelna dla człowieka reprezentacja, np. do wypisania w terminalu.
     pub fn display(&self) -> String {
         match self {
             ConfigValue::Bool(b) => b.to_string(),
@@ -257,12 +295,12 @@ impl Store {
         let config_home = std::env::var("XDG_CONFIG_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
-                let home = std::env::var("HOME").expect("HOME is not set");
+                let home = std::env::var("HOME").expect("HOME nie jest ustawione");
                 PathBuf::from(home).join(".config")
             });
 
-        let user_path = config_home.join("lfbe/lfconf/settings.ron");
-        let system_path = PathBuf::from("/usr/share/lfbe/lfconf/defaults.ron");
+        let user_path = config_home.join("lfconf/settings.ron");
+        let system_path = PathBuf::from("/usr/share/lfconf/defaults.ron");
 
         let mut final_config = ConfigStorage::default();
 
@@ -331,7 +369,7 @@ impl Store {
         let ron_str = {
             let db = self.data.read();
             ron::ser::to_string_pretty(&*db, PrettyConfig::default())
-                .expect("Failed to serialize RON data")
+                .expect("serializacja RON nie powinna zawieść")
         };
 
         let path = self.user_path.clone();
