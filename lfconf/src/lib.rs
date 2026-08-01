@@ -20,7 +20,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-///
 /// ```no_run
 /// # async fn example() -> zbus::Result<()> {
 /// let config = lfconf::client::ConfigClient::connect().await?;
@@ -164,17 +163,14 @@ pub enum ConfigValue {
 }
 
 impl ConfigValue {
-    /// Parsuje wartość z tekstu w składni RON, np. "true", "42", "\"hello\"".
     pub fn from_ron_str(s: &str) -> Result<Self, ron::error::SpannedError> {
         ron::from_str(s)
     }
 
-    /// Serializuje do tekstu RON, do przesłania przez D-Bus.
     pub fn to_ron_string(&self) -> String {
         ron::to_string(self).unwrap_or_default()
     }
 
-    /// Odgaduje typ z surowego tekstu (np. z argumentu CLI): bool -> int -> float -> string.
     pub fn infer_from_str(raw: &str) -> Self {
         if let Ok(b) = raw.parse::<bool>() {
             ConfigValue::Bool(b)
@@ -187,7 +183,6 @@ impl ConfigValue {
         }
     }
 
-    /// Czytelna dla człowieka reprezentacja, np. do wypisania w terminalu.
     pub fn display(&self) -> String {
         match self {
             ConfigValue::Bool(b) => b.to_string(),
@@ -248,6 +243,24 @@ impl TryFrom<ConfigValue> for i64 {
         }
     }
 }
+impl TryFrom<ConfigValue> for i32 {
+    type Error = ();
+    fn try_from(v: ConfigValue) -> Result<Self, Self::Error> {
+        match v {
+            ConfigValue::Int(i) => i32::try_from(i).map_err(|_| ()),
+            _ => Err(()),
+        }
+    }
+}
+impl TryFrom<ConfigValue> for u32 {
+    type Error = ();
+    fn try_from(v: ConfigValue) -> Result<Self, Self::Error> {
+        match v {
+            ConfigValue::Int(i) => u32::try_from(i).map_err(|_| ()),
+            _ => Err(()),
+        }
+    }
+}
 impl TryFrom<ConfigValue> for f64 {
     type Error = ();
     fn try_from(v: ConfigValue) -> Result<Self, Self::Error> {
@@ -299,8 +312,8 @@ impl Store {
                 PathBuf::from(home).join(".config")
             });
 
-        let user_path = config_home.join("lfconf/settings.ron");
-        let system_path = PathBuf::from("/usr/share/lfconf/defaults.ron");
+        let user_path = config_home.join("lfbe/lfconf/settings.ron");
+        let system_path = PathBuf::from("/usr/share/lfbe/lfconf/defaults.ron");
 
         let mut final_config = ConfigStorage::default();
 
