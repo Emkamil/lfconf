@@ -56,6 +56,7 @@ pub mod client {
         pub value: Option<ConfigValue>,
     }
 
+    #[derive(Debug, Clone)]
     pub struct ConfigClient {
         proxy: LfConfProxy<'static>,
     }
@@ -128,6 +129,23 @@ pub mod client {
                 }
             }
             result
+        }
+
+        pub async fn changes(&self) -> zbus::Result<impl futures_util::Stream<Item = ConfigChange> + '_> {
+            let stream = self.proxy.receive_notify().await?;
+            Ok(stream.filter_map(|signal| async move {
+                let args = signal.args().ok()?;
+                let value = if args.value.is_empty() {
+                    None
+                } else {
+                    ConfigValue::from_ron_str(&args.value).ok()
+                };
+                Some(ConfigChange {
+                    section: args.section.to_string(),
+                    key: args.key.to_string(),
+                    value,
+                })
+            }))
         }
 
         pub async fn watch<F>(&self, mut callback: F) -> zbus::Result<()>
