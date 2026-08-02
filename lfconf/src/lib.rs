@@ -171,25 +171,29 @@ pub mod client {
         }
 
         pub async fn watch<F>(&self, mut callback: F) -> zbus::Result<()>
-        where
-            F: FnMut(ConfigChange) + Send,
-        {
-            let mut stream = self.proxy.receive_notify().await?;
-            while let Some(signal) = stream.next().await {
-                let args = signal.args()?;
-                let value = if args.value.is_empty() {
-                    None
-                } else {
-                    ConfigValue::from_ron_str(&args.value).ok()
-                };
-                callback(ConfigChange {
-                    section: args.section.to_string(),
-                    key: args.key.to_string(),
-                    value,
-                });
+            where
+                F: FnMut(ConfigChange) + Send,
+            {
+                let mut stream = self.proxy.receive_notify().await?;
+                
+                while let Some(signal) = stream.next().await {
+                    if let Ok(args) = signal.args() {
+                        let value = if args.value.is_empty() {
+                            None
+                        } else {
+                            ConfigValue::from_ron_str(&args.value).ok()
+                        };
+            
+                        callback(ConfigChange {
+                            section: args.section.to_string(),
+                            key: args.key.to_string(),
+                            value,
+                        });
+                    }
+                }
+                
+                Ok(())
             }
-            Ok(())
-        }
     }
 }
 
