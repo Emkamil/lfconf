@@ -62,6 +62,22 @@ pub mod client {
     }
 
     impl ConfigClient {
+        #[cfg(feature = "gtk4")]
+        pub fn attach_glib_watch<F>(&self, mut callback: F) -> zbus::Result<()>
+        where
+            F: FnMut(ConfigChange) + 'static,
+        {
+            let client = self.clone();
+            glib::MainContext::default().spawn_local(async move {
+                if let Ok(mut stream) = client.changes().await {
+                    while let Some(change) = stream.next().await {
+                        callback(change);
+                    }
+                }
+            });
+            Ok(())
+        }
+        
         pub async fn connect() -> zbus::Result<Self> {
             let connection = zbus::Connection::session().await?;
             let proxy = LfConfProxy::new(&connection).await?;
@@ -74,6 +90,12 @@ pub mod client {
                 return None;
             }
             ConfigValue::from_ron_str(&raw).ok()
+        }
+
+        pub async fn get_typed<T: serde::de::DeserializeOwned>(&self, section: &str, key: &str) -> Option<T> {
+            let raw = self.proxy.get_value(section, key).await.ok()?;
+            if raw.is_empty() { return None; }
+            ron::from_str(&raw).ok()
         }
 
         pub async fn get_or<T>(&self, section: &str, key: &str, default: T) -> T
