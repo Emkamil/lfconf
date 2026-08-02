@@ -356,8 +356,8 @@ impl Store {
                 PathBuf::from(home).join(".config")
             });
 
-        let user_path = config_home.join("lfconf/settings.ron");
-        let system_path = PathBuf::from("/usr/share/lfconf/defaults.ron");
+        let user_path = config_home.join("lfbe/lfconf/settings.ron");
+        let system_path = PathBuf::from("/usr/share/lfbe/lfconf/defaults.ron");
 
         let mut final_config = ConfigStorage::default();
 
