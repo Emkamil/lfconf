@@ -17,5 +17,5 @@ serde.workspace = true
 ron.workspace = true
 parking_lot.workspace = true
 futures-util.workspace = true
-gtk4.workspace = true
-glib.workspace = true
+gtk4 = { workspace = true, optional = true }
+glib = { workspace = true, optional = true }
