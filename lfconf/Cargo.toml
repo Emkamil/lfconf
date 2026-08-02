@@ -6,6 +6,10 @@ license.workspace = true
 repository.workspace = true
 description = "Biblioteka klienta i storage do lfconfd - konfiguracji lfshell"
 
+[features]
+default = []
+gtk4 = ["dep:gtk4", "dep:glib"] #
+
 [dependencies]
 tokio = { workspace = true, features = ["rt", "fs"] }
 zbus.workspace = true
